@@ -17,3 +17,7 @@ Since the Arduino can't hold much data all data is sent out on the serial USB po
 a raspberry pi is connected to the port and taks in the data for processing
 the rpi will store all values in a db and create a webpage with pretty graphs on
 
+
+Current state is pre alpha
+Todo list is to long to write down
+
