@@ -18,6 +18,21 @@ a raspberry pi is connected to the port and taks in the data for processing
 the rpi will store all values in a db and create a webpage with pretty graphs on
 
 
-Current state is pre alpha
-Todo list is to long to write down
+Current state is pre alpha so a lot is left to do before it's even partly usable.
+
+TODO list is to long to write down but it contains things like
+*schematics:
+*  change hardware to smd and jacks to stacked connectors
+*  find a good way to connect the arduino
+*  figure out why the midpoint isn't stable (as seen from adc)
+*  
+*arduoino:
+*  make library functions ?
+*  calculate power factor
+*  verify the math
+*  add digital filtering to even out values over time
+*  use eeprom to save a few more values
+*  
+*rpi
+*  Write the code
 
