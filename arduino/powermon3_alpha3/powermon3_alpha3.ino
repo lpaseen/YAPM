@@ -10,11 +10,19 @@
  * 2013-05-23  Peter Sjoberg <peter.sjoberg@hp.com>
  * 	Code cleanup, added channel selection to lcd
  *
- * $Id: powermon3_alpha3.ino 132 2013-05-26 05:04:01Z peters $
+ * $Id: powermon3_alpha3.ino 141 2013-05-31 06:17:18Z peters $
  *
  */
 
-
+//avoid compile error, see http://wiki.gentoo.org/wiki/Arduino
+// in /usr/share/arduino-1.0.3/hardware/arduino/cores/arduino/Arduino.h
+/*
+#ifndef Arduino_h
+#define Arduino_h
+//start: fix the compatibility issue
+#define __AVR_LIBC_DEPRECATED_ENABLE__ 1
+//end: fix the compatibility issue
+*/
 // i2C/TWI lib, for date
 #include <Wire.h>
 #define DS1307_I2C_ADDRESS 0x68
@@ -26,13 +34,13 @@ LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
 
 //For DS18S20 temp
 #include <OneWire.h>
-OneWire  ds(17);  // Initiate temp reading
+//OneWire  ds(17);  // Initiate temp reading
+OneWire  ds(22);  // Initiate temp reading
 
 //To talk to ADC and io mux
 #include <SPI.h>
 #define maxChannels 8
 #define ADCcs 3 // MCP3208 spi-CS is on pin 3
-#define MUXcs 2 // spi io->mux, CS on pin 2
 
 // Bits of accuracy for the ADC
 #define ADCbits 12
@@ -64,7 +72,7 @@ unsigned int MAXsamples; // How many samples required to cover 200ms (=12cycles 
 // Store a few values in memory, to be dumped on serial port later
 // store the raw value to allow the calibrations to be done outside this program
 // #define buffersize 40
-#define buffersize 14
+#define buffersize 40
 typedef struct valrec{
   unsigned long sampledate;  
   unsigned long sampletime;
@@ -110,7 +118,8 @@ extern int __heap_start, *__brkval;
 
 // #define DEBUGTX
 // #define DEBUGRX
-//#define DEBUGVOLT
+// #define DEBUGVOLT
+// #define DEBUGSTACK
  
 //Calibration coeficients
 //These need to be set in order to obtain accurate results
@@ -407,12 +416,12 @@ double readrmsI(byte channel,byte CT_AMPS,double CT_VOLT){
 
   ch_LOWval[channel]=_MinVal;
   ch_HIGHval[channel]=_MaxVal;
-  ch_valuesummary[channel]=_sum;
+  ch_valuesummary[channel]=_sum;//Raw ADC value
   ch_midpoint[channel]=((_MaxVal-_MinVal)/2)+_MinVal;
 
-//rms
-  ch_sumV[channel]=sqrt((double(_sum)/MAXsamples)*ADC_step_mV*ADC_step_mV)/1000; // convert to milliV rms
-  ch_sumI[channel]=ch_sumV[channel]*CT_AMPS/CT_VOLT/1000; // convert milliV rms to AMP
+//rms sqrt(($_sum*$ADC_step_mV*$ADC_step_mV)/$MAXsamples)/1000"
+  ch_sumV[channel]=sqrt((double)_sum*(double)ADC_step_mV*(double)ADC_step_mV/MAXsamples)/1000; // convert to milliV rms
+  ch_sumI[channel]=ch_sumV[channel]/(double)CT_VOLT*(double)CT_AMPS/(double)1000; // convert milliV rms to AMP
   return ch_sumI[channel];
 } // readrmsI
 
@@ -521,10 +530,11 @@ void dumpBuff(boolean all,boolean mark){
       if (buffvalues[buffhead].sampletime==0) continue; // skip empty slots
       if (!header){
 	Serial.print("#Free ram: ");
-	Serial.print(freeRam(), DEC);
+	Serial.print(freeRam());
 	Serial.print(", stack unused ");
-	Serial.println(stackUnused(),DEC);
-        Serial.println("#BEGIN dump buffer; FORMATVER,entry#,date,time,tempC*10,samples,ADC_step_mV,reported,valsum{channels...}");
+	Serial.println(stackUnused());
+	Serial.println("#BEGIN dump buffer; FORMATVER,entry#,date,time,tempC*10,samples,ADC_step_mV,reported,valsum{channels...}");
+	//        Serial.println("#BEGIN");
         header=true;
       }
       printValue(buffhead);
@@ -594,26 +604,50 @@ void serialEvent() {
 //Check if any command entered on serial channel
 void CheckSerial(){
   byte second, minute, hour, dayOfWeek, dayOfMonth, month, year;
+  char tmp_str[3];
 
   serialEvent();
   if (stringComplete){
     Serial.print("# string complete: ");
+    inputString.toUpperCase();
     Serial.println(inputString);
-    if (inputString.startsWith("T")) { //Set time
-;/*      year=byte(inputString.substring(1,2));
-      month=byte(inputString.substring(3,4));
-      dayOfMonth=byte(inputString.substring(5,6));
-      hour=byte(inputString.substring(7,8));
-      minute=byte(inputString.substring(9,10));
-      second = byte(inputString.substring(11,12));
-      dayOfWeek=byte(inputString.substring(13,13));
+    //    if (inputString.startsWith("T")) { //Set time
+    if (inputString.charAt(0)=='T') { //Set time
+      inputString.substring(1,3).toCharArray(tmp_str, sizeof(tmp_str));
+      Serial.print("Setting the time to: 20");
+      Serial.print(tmp_str);
+      year=atoi(tmp_str);
+      inputString.substring(3,5).toCharArray(tmp_str, sizeof(tmp_str));
+      Serial.print("-");
+      Serial.print(tmp_str);
+      month=atoi(tmp_str);
+      inputString.substring(5,7).toCharArray(tmp_str, sizeof(tmp_str));
+      Serial.print("-");
+      Serial.print(tmp_str);
+      dayOfMonth=atoi(tmp_str);
+      inputString.substring(7,9).toCharArray(tmp_str, sizeof(tmp_str));
+      Serial.print(" ");
+      Serial.print(tmp_str);
+      hour=atoi(tmp_str);
+      inputString.substring(9,11).toCharArray(tmp_str, sizeof(tmp_str));
+      Serial.print(":");
+      Serial.print(tmp_str);
+      minute=atoi(tmp_str);
+      inputString.substring(11,13).toCharArray(tmp_str, sizeof(tmp_str));
+      Serial.print(":");
+      Serial.print(tmp_str);
+      second=atoi(tmp_str);
+      inputString.substring(13,14).toCharArray(tmp_str, sizeof(tmp_str));
+      Serial.print(" weekday:");
+      Serial.print(tmp_str);
+      dayOfWeek=atoi(tmp_str);
+      // T1306010248136\
       setDateDs1307(second, minute, hour, dayOfWeek, dayOfMonth, month, year);
-      */
-    } else if (inputString.startsWith("D")) { // dump any new data and mark it viewed
+    } else if (inputString.charAt(0)=='D') { // dump any new data and mark it viewed
       dumpBuff(false,true);
-    } else if (inputString.startsWith("A")) { // dump all data and mark it viewed
+    } else if (inputString.charAt(0)=='A') { // dump all data and mark it viewed
       dumpBuff(true,true);
-    } else if (inputString.startsWith("S")) { // show all data but do NOT mark it viewed
+    } else if (inputString.charAt(0)=='S') { // show all data but do NOT mark it viewed
       dumpBuff(true,false);
     }
     // clear the string:
@@ -621,7 +655,6 @@ void CheckSerial(){
     stringComplete = false;    
   }
 } // CheckSerial
-
 
 //################################################################################################################################
 //################################################################################################################################
@@ -631,6 +664,7 @@ void setup()
 {
   byte second, minute, hour, dayOfWeek, dayOfMonth, month, year;
   byte channel;
+  unsigned long result;
 
   // i2c, date
   Wire.begin();
@@ -639,16 +673,18 @@ void setup()
   // You probably only want to set your clock once and then remove
   // the setDateDs1307 call.
   year = 13;
-  month = 2;
-  dayOfMonth = 1;
-  hour = 14;
-  minute = 2;
-  second = 0;
-  dayOfWeek = 6;
+  month = 5;
+  dayOfMonth = 28;
+  hour = 1;
+  minute = 21;
+  second = 40;
+  dayOfWeek = 3;
   //  setDateDs1307(second, minute, hour, dayOfWeek, dayOfMonth, month, year);
 
   //to track memory usage
   fillStack();
+
+  inputString.reserve(21);
 
   // set the slaveSelectPin as an output:
   pinMode (ADCcs, OUTPUT);
@@ -665,7 +701,11 @@ void setup()
   ADC_Vref=5000; //external prec vref
   ADC_step_mV=(ADC_Vref*1000)/ADCmax; // ADC_step_mV = milliVolt*1000 per ADC step
 
-  for (channel=0;channel<maxChannels;channel++){ch_midpoint[channel]=ADCmidpoint;}
+  // calculate midpoint for all channels
+  result=readVolt(0,9.57);
+  for (channel=1;channel<maxChannels;channel++){
+    result=readrmsI(channel,120,2.5);
+  }
 
   Serial.begin(115200);
 //  Serial.begin(9600);
@@ -682,8 +722,6 @@ void setup()
   Serial.print(",");
   Serial.print("date");
   Serial.print(",");
-  Serial.print("tempC");
-  Serial.print(",");
   Serial.print("min");
   Serial.print(",");
   Serial.print("max");
@@ -695,13 +733,15 @@ void setup()
   Serial.print("sumV");
   Serial.print(",");
   Serial.print("sumI");
-  Serial.print(",");
-  Serial.print("freeRam");
-  Serial.print(",");
-  Serial.println("freeStack");
+  //  Serial.print(",");
+  //  Serial.print("freeRam");
+  //  Serial.print(",");
+  //  Serial.print("freeStack");
+  Serial.println();
   // set up the LCD's number of columns and rows:
   lcd.begin(16, 2);
   lcd.clear();
+
 } // setup
 
 // ############################################################################
@@ -718,7 +758,7 @@ void loop()
   unsigned int i;
   float lineVoltage;
   byte prevkey;
-
+  unsigned int waitloop,waitdelay;
   
   /* DEBUG
   Serial.println("");
@@ -829,7 +869,9 @@ void loop()
   Serial.print(samplingtime);
   Serial.print(" milliseconds, Samples:");
   Serial.print(MAXsamples);
-  Serial.print(", min/max/midpoint:");
+  Serial.print(", Temp: ");
+  Serial.print(tempC);
+  Serial.print("C, min/max/midpoint:");
   Serial.print(ch_LOWval[0]);
   Serial.print("/");
   Serial.print(ch_HIGHval[0]);
@@ -837,7 +879,10 @@ void loop()
   Serial.print((ch_HIGHval[0]-ch_LOWval[0])/2+ch_LOWval[0]);
   Serial.print(" main:");
   Serial.print(lineVoltage);
-  Serial.print("V");
+  Serial.print("V, Free ram: ");
+  Serial.print(freeRam());
+  Serial.print(", stack unused ");
+  Serial.print(stackUnused());
   Serial.println();
 
 //Data collected, lets show it
@@ -866,19 +911,24 @@ void loop()
     lcd.print(tempC);
     lcd.print("C         ");
   } else if (dispmode==2){
-    // <lowcnt.0>/<highcnt.0>/midpoint
-    // <sumV.0>/<sumI.0>
-    lcd.print(ch_LOWval[0]);
+    // <lowcnt.basech>/<highcnt.basech>/midpoint
+    // <lowcnt.basech+1>/<highcnt.basech+1>/midpoint
+    lcd.print(ch_LOWval[basech]);
     lcd.print("/");
-    lcd.print(ch_HIGHval[0]);
+    lcd.print(ch_HIGHval[basech]);
     lcd.print("/");
-    lcd.print((ch_HIGHval[0]-ch_LOWval[0])/2+ch_LOWval[0]);
+    lcd.print((ch_HIGHval[basech]-ch_LOWval[basech])/2+ch_LOWval[basech]);
     lcd.setCursor(0,1); // next line
-    lcd.print(ch_sumV[0]/1000);
-    lcd.print("mV/");
+    lcd.print(ch_LOWval[basech+1]);
+    lcd.print("/");
+    lcd.print(ch_HIGHval[basech+1]);
+    lcd.print("/");
+    lcd.print((ch_HIGHval[basech+1]-ch_LOWval[basech+1])/2+ch_LOWval[basech+1]);
+    lcd.setCursor(15,1); // 
+    lcd.print(basech);
     //    lcd.print(ch_sumI[0]/100);
-    lcd.print(lineVoltage);
-    lcd.print("V");
+    //    lcd.print(lineVoltage);
+    //    lcd.print("V");
   } else if (dispmode==3){
     // <vcc>/ADC_step_mV
     // <MAXsamples>
@@ -928,6 +978,7 @@ void loop()
   
   //################################################################  
   for (channel=0;channel<maxChannels;channel++){
+    //    lcd.setCursor(15,1);lcd.print(channel);
     Serial.print(channel);
     Serial.print(",");  
     Serial.print("20");
@@ -951,9 +1002,6 @@ void loop()
     //
     //    Serial.print(ADC_step_mV);
     //    Serial.print(",");
-    Serial.print(tempC);
-    Serial.print(",");
-    //
     Serial.print(ch_LOWval[channel]);
     Serial.print(",");
     Serial.print(ch_HIGHval[channel]);
@@ -970,24 +1018,33 @@ void loop()
     Serial.print(ch_sumV[channel]);
     Serial.print(",");
     Serial.print(ch_sumI[channel]);
-    Serial.print(",");
-//    Serial.print(buffhead);
-//    Serial.print(",");
-    Serial.print(freeRam(), DEC);
-    Serial.print(",");
-    Serial.println(stackUnused(),DEC);
+    //    Serial.print(",");
+    //    Serial.print(buffhead);
+    //    Serial.print(",");
+    //    Serial.print(freeRam(), DEC);
+    //    Serial.print(",");
+    //    Serial.println(stackUnused(),DEC);
+    Serial.println();
   }
   
    
   CheckKeys();
   CheckSerial();
 
-  for (i=0;i<50;i++){ // Wait for around 5 seconds
+  
+  waitdelay=100; //ms to wait before probing again
+  waitloop=1000/waitdelay; // milliseconds between updates
+  for (i=0;i<waitloop;i++){ // Wait for around 5 seconds
     prevkey=lastkey;
     CheckKeys();
     if (prevkey==lastkey) {
-      delay(100);
+      delay(waitdelay);
     } else {
+      if (lastkey==5){ // Select
+	i=999999; // I'm done
+      }else{
+	i=waitloop; // reset timeout
+      }
       lcd.clear();
       //      lcd.setCursor(15,0);
       //      lcd.print(dispmode);
@@ -995,15 +1052,26 @@ void loop()
       lcd.print("dispmode: ");
       lcd.print(dispmode);
       lcd.setCursor(0,1);
-      lcd.print("basech  : ");
-      if (dispmode==5){
+      if (dispmode==1){
+	//         1234567890123456
+	lcd.print("date/volt/temp ");
+      } else if (dispmode==2){
+	//         1234567890123456
+	lcd.print("LowMidHigh: ");
 	lcd.print(basech);
-      } else {
-	lcd.print("N/A");
+      } else if (dispmode==3){
+	//         1234567890123456
+	lcd.print("vcc/step/samples");
+      } else if (dispmode==4){
+	//         1234567890123456
+	lcd.print("main I,W");
+      } else if (dispmode==5){
+	lcd.print("basech  : ");
+	lcd.print(basech);
       }
-    }
-  }
-}
+    } // if prev=last;else
+  } // for i 0..50
+} // loop()
 
 /*
 ### Set mode for emacs

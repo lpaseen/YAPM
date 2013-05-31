@@ -4,9 +4,10 @@
 #
 cd ~/powermon/logs
 if ls powermon_data_2013-*csv &>/dev/null;then
+    date +%F\ %T
     mv powermon_data_2013-*csv TODO
     cd TODO
-    cat powermon_data_*.csv|~/powermon/Load_data.pl
+    cat powermon_data_*.csv|~/powermon/Load_data.pl 
     mv powermon_data_2013-*csv ../DONE/
     cd ~/powermon
 fi
