@@ -11,7 +11,7 @@ if ls powermon_data_201?-*csv &>/dev/null;then
     cd TODO
     cat powermon_data_*.csv|~/powermon/Load_data.pl
     # Update the summary table with latest news
-    mysql -upowermon -penergymon powermon -e "source ~/powermon/Fillin_summarytable.sql"
+#Not needed - I think    mysql -upowermon -penergymon powermon -e "source ~/powermon/Fillin_summarytable.sql"
     # FIXME, the files moved might been created last month
     # mv powermon_data_201?-*csv ../DONE/$(date +%Y-%m)
     for i in powermon_data_201?-*csv;do
