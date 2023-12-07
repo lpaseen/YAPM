@@ -17,8 +17,8 @@ Since the Arduino can't hold much data all data is sent out on the serial USB po
 A raspberry pi is connected to the port and receives the data for processing.
 The rpi will store all values in a db and create a webpage with pretty
 graphs on.
- http://energymon.techwiz.ca/
- http://grafana.techwiz.ca/public-dashboards/8b3ad5f780984947b2cb39bf2cf0eb90
+* http://energymon.techwiz.ca/
+* http://grafana.techwiz.ca/public-dashboards/8b3ad5f780984947b2cb39bf2cf0eb90
 
 Current state is pre alpha so a lot is left to do before it's even partly usable.
 
@@ -28,6 +28,7 @@ TODO list is to long to write down but it contains things like
 *  find a good way to connect the arduino
 *  figure out why the midpoint isn't stable (as seen from adc), guess
    an op-amp is needed
+*  maybe replace arduino with ESP or so, removing the need for rpi
 *  
 *arduino:
 *  make library functions?
