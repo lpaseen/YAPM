@@ -13,10 +13,12 @@ It uses
 * that RTC has some onboard eeprom and a temp sensor
 * 
 
-Since the Arduino can't hold much data all data is sent out on the serial USB port
-a raspberry pi is connected to the port and taks in the data for processing
-the rpi will store all values in a db and create a webpage with pretty graphs on
-
+Since the Arduino can't hold much data all data is sent out on the serial USB port.
+A raspberry pi is connected to the port and receives the data for processing.
+The rpi will store all values in a db and create a webpage with pretty
+graphs on.
+ http://energymon.techwiz.ca/
+ http://grafana.techwiz.ca/public-dashboards/8b3ad5f780984947b2cb39bf2cf0eb90
 
 Current state is pre alpha so a lot is left to do before it's even partly usable.
 
@@ -24,15 +26,18 @@ TODO list is to long to write down but it contains things like
 *schematics:
 *  change hardware to smd and jacks to stacked connectors
 *  find a good way to connect the arduino
-*  figure out why the midpoint isn't stable (as seen from adc)
+*  figure out why the midpoint isn't stable (as seen from adc), guess
+   an op-amp is needed
 *  
-*arduoino:
-*  make library functions ?
+*arduino:
+*  make library functions?
 *  calculate power factor
 *  verify the math
 *  add digital filtering to even out values over time
-*  use eeprom to save a few more values
+*  (use eeprom to save a few more values?)
+*  send out values ASAP, the buffering is not really useful.
 *  
 *rpi
-*  Write the code
+* code to send to backend is written. csv file is stored locally.
+
 
